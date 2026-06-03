@@ -11,6 +11,12 @@ namespace LogAnalyzer
         [STAThread]
         static void Main(string[] args)
         {
+            logLoader.OnProgress += count =>
+            {
+                Console.ForegroundColor = ConsoleColor.DarkGray;
+                Console.Write($"\r  Loading... {count} lines");
+                Console.ResetColor();
+            };
 
             bool running = true;
             while (running)
@@ -74,12 +80,6 @@ namespace LogAnalyzer
                 return;
             }
 
-            logLoader.OnProgress += count =>
-            {
-                Console.ForegroundColor = ConsoleColor.DarkGray;
-                Console.Write($"\r  Loading... {count} lines");
-                Console.ResetColor();
-            };
             try
             {
                 if (choice == 1)
@@ -135,6 +135,7 @@ namespace LogAnalyzer
                 PrintColored("  [✗] No entries loaded.\n", ConsoleColor.Red);
                 PrintColored("  Do you want to load them? (Y/N)", ConsoleColor.DarkGray);
                 Console.Write("  >> ");
+
                 if (Console.ReadLine().ToUpper() == "Y")
                 {
                     Choice1And2(1);
@@ -144,6 +145,14 @@ namespace LogAnalyzer
                     return;
                 }
             }
+
+            LogAnalyzer logAnalyzer = new LogAnalyzer(logLoader.Entries, logLoader.KnownIps);
+            logAnalyzer.Analyze();
+            foreach (Alert alert in logAnalyzer.Alerts)
+            {
+                Console.WriteLine(alert.Decription);
+            }
+            Console.ReadLine();
         }
 
         static string GetPathDialog()

@@ -92,7 +92,7 @@ namespace LogAnalyzer
                 Severity = result[1],
                 Host = result[2],
                 User = result[3],
-                Event = result[4],
+                Event = result[4].Trim(),
                 Ip = result[5],
                 port = int.Parse(result[6]),
                 Service = result[7]

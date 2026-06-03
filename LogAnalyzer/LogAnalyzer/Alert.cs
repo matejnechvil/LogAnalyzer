@@ -8,5 +8,11 @@ namespace LogAnalyzer
 {
     internal class Alert
     {
+        public required string Title { get; set; }
+        public required string Severity { get; set; }
+        public required DateTime DateAndTime { get; set; }
+        public required string Decription { get; set; }
+        public required string AffectedUser { get; set; }
+        public required string Ip { get; set; }
     }
 }
