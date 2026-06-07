@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.VisualBasic.Logging;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -24,8 +25,11 @@ namespace LogAnalyzer
             for (int i = 0; i < Entries.Count; i++)
             {
                 DetectLockedAccount(Entries[i]);
+                DetectNightLogin(Entries[i]);
+                DetectUnknownIPs(Entries[i]);
             }
         }
+
 
         private void DetectLockedAccount(LogEntry oneEntry)
         {
@@ -42,6 +46,81 @@ namespace LogAnalyzer
                 };
 
                 Alerts.Add(alert);
+            }
+        }
+        private void DetectNightLogin(LogEntry oneEntry)
+        {
+            int login;
+            if (oneEntry.Event == "LOGIN_SUCCESS")
+            {
+                login = 1;
+            }
+            else if (oneEntry.Event == "LOGIN_FAIL")
+            {
+                login = 2;
+            }
+            else
+            {
+                login = 0;
+            }
+
+            if (login == 1 || login == 2)
+            {
+                if (oneEntry.DateAndTime.Hour > 21 || oneEntry.DateAndTime.Hour < 5)
+                {
+                    Alert alert = new Alert
+                    {
+                        Title = "NIGHT LOGIN",
+                        AffectedUser = oneEntry.User,
+                        Severity = oneEntry.Severity,
+                        Decription = $"Account {oneEntry.User} on IP {oneEntry.Ip} {(login == 1 ? "logged in" : "tried to log in")} outside of standard hours on {oneEntry.DateAndTime:yyyy.dd.MM} at {oneEntry.DateAndTime:HH:mm:ss}",
+                        DateAndTime = oneEntry.DateAndTime,
+                        Ip = oneEntry.Ip
+                    };
+
+                    Alerts.Add(alert);
+                }
+            }
+        }
+
+        public void DetectUnknownIPs(LogEntry oneEntry)
+        {
+            if (!KnownIps.Contains(oneEntry.Ip))
+            {
+                Alert alert = new Alert
+                {
+                    Title = "UNKNOWN IP ADRESS",
+                    AffectedUser = oneEntry.User,
+                    Severity = oneEntry.Severity,
+                    Decription = $"Account {oneEntry.User} on IP {oneEntry.Ip} is not in the list of trusted Ip adresses",
+                    DateAndTime = oneEntry.DateAndTime,
+                    Ip = oneEntry.Ip
+                };
+
+                Alerts.Add(alert);
+            }
+        }
+
+        public void DetectErrorRepetition(LogEntry oneEntry, int iteration)
+        {
+            Dictionary<LogEntry, int> errorLogs = new Dictionary<LogEntry, int>();
+
+            if (oneEntry.Severity == "ERROR")
+            {
+                if (!errorLogs.ContainsKey(oneEntry))
+                {
+                    errorLogs.Add(oneEntry, 1);
+                }
+            }
+
+            if (iteration != Entries.Count - 1)
+            {
+                return;
+            }
+
+            for (int i = 0; i < errorLogs.Count; i++)
+            {
+                // detekce
             }
         }
 
