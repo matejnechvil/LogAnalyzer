@@ -150,7 +150,7 @@ namespace LogAnalyzer
             logAnalyzer.Analyze();
             foreach (Alert alert in logAnalyzer.Alerts)
             {
-                Console.WriteLine(alert.Decription);
+                Console.WriteLine(alert.Description);
             }
             Console.ReadLine();
         }

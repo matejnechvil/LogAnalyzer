@@ -27,6 +27,7 @@ namespace LogAnalyzer
                 DetectLockedAccount(Entries[i]);
                 DetectNightLogin(Entries[i]);
                 DetectUnknownIPs(Entries[i]);
+                DetectErrorRepetition(Entries[i], i);
             }
         }
 
@@ -40,7 +41,7 @@ namespace LogAnalyzer
                     Title = "ACCOUNT LOCKED",
                     AffectedUser = oneEntry.User,
                     Severity = oneEntry.Severity,
-                    Decription = $"Account {oneEntry.User} on IP {oneEntry.Ip} was locked out on {oneEntry.DateAndTime:yyyy.dd.MM} at {oneEntry.DateAndTime:HH:mm:ss}",
+                    Description = $"Account {oneEntry.User} on IP {oneEntry.Ip} was locked out on {oneEntry.DateAndTime:yyyy.dd.MM} at {oneEntry.DateAndTime:HH:mm:ss}",
                     DateAndTime = oneEntry.DateAndTime,
                     Ip = oneEntry.Ip
                 };
@@ -73,7 +74,7 @@ namespace LogAnalyzer
                         Title = "NIGHT LOGIN",
                         AffectedUser = oneEntry.User,
                         Severity = oneEntry.Severity,
-                        Decription = $"Account {oneEntry.User} on IP {oneEntry.Ip} {(login == 1 ? "logged in" : "tried to log in")} outside of standard hours on {oneEntry.DateAndTime:yyyy.dd.MM} at {oneEntry.DateAndTime:HH:mm:ss}",
+                        Description = $"Account {oneEntry.User} on IP {oneEntry.Ip} {(login == 1 ? "logged in" : "tried to log in")} outside of standard hours on {oneEntry.DateAndTime:yyyy.dd.MM} at {oneEntry.DateAndTime:HH:mm:ss}",
                         DateAndTime = oneEntry.DateAndTime,
                         Ip = oneEntry.Ip
                     };
@@ -92,7 +93,7 @@ namespace LogAnalyzer
                     Title = "UNKNOWN IP ADRESS",
                     AffectedUser = oneEntry.User,
                     Severity = oneEntry.Severity,
-                    Decription = $"Account {oneEntry.User} on IP {oneEntry.Ip} is not in the list of trusted Ip adresses",
+                    Description = $"Account {oneEntry.User} on IP {oneEntry.Ip} is not in the list of trusted Ip adresses",
                     DateAndTime = oneEntry.DateAndTime,
                     Ip = oneEntry.Ip
                 };
@@ -101,15 +102,18 @@ namespace LogAnalyzer
             }
         }
 
+        Dictionary<LogEntry, int> errorLogs = new Dictionary<LogEntry, int>();
         public void DetectErrorRepetition(LogEntry oneEntry, int iteration)
         {
-            Dictionary<LogEntry, int> errorLogs = new Dictionary<LogEntry, int>();
-
             if (oneEntry.Severity == "ERROR")
             {
                 if (!errorLogs.ContainsKey(oneEntry))
                 {
                     errorLogs.Add(oneEntry, 1);
+                }
+                else
+                {
+                    errorLogs[oneEntry]++;
                 }
             }
 
@@ -118,9 +122,22 @@ namespace LogAnalyzer
                 return;
             }
 
-            for (int i = 0; i < errorLogs.Count; i++)
+            foreach (var (logEntry, count) in errorLogs)
             {
-                // detekce
+                if (count > 0)
+                {
+                    Alert alert = new Alert
+                    {
+                        Title = "ERROR REPETITION",
+                        AffectedUser = logEntry.User,
+                        Severity = oneEntry.Severity,
+                        Description = $"Error {logEntry.Event} has repeated {logEntry} times in the log",
+                        DateAndTime = logEntry.DateAndTime,
+                        Ip = logEntry.Ip
+                    };
+
+                    Alerts.Add(alert);
+                }
             }
         }
 
