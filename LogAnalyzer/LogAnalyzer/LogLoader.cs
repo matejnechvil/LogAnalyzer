@@ -89,13 +89,13 @@ namespace LogAnalyzer
             LogEntry entry = new LogEntry
             {
                 DateAndTime = DateTime.Parse(result[0]),
-                Severity = result[1],
-                Host = result[2],
-                User = result[3],
+                Severity = result[1].Trim(),
+                Host = result[2].Trim(),
+                User = result[3].Trim(),
                 Event = result[4].Trim(),
-                Ip = result[5],
+                Ip = result[5].Trim(),
                 port = int.Parse(result[6]),
-                Service = result[7]
+                Service = result[7].Trim()
             };
             return entry;
         }

@@ -1,6 +1,7 @@
 ﻿using Microsoft.VisualBasic.Logging;
 using System;
 using System.Collections.Generic;
+using System.DirectoryServices;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -102,18 +103,18 @@ namespace LogAnalyzer
             }
         }
 
-        Dictionary<LogEntry, int> errorLogs = new Dictionary<LogEntry, int>();
+        Dictionary<string, int> errorDict = new Dictionary<string, int>();
         public void DetectErrorRepetition(LogEntry oneEntry, int iteration)
         {
             if (oneEntry.Severity == "ERROR")
             {
-                if (!errorLogs.ContainsKey(oneEntry))
+                if (errorDict.ContainsKey(oneEntry.Event))
                 {
-                    errorLogs.Add(oneEntry, 1);
+                    errorDict[oneEntry.Event]++;
                 }
                 else
                 {
-                    errorLogs[oneEntry]++;
+                    errorDict.Add(oneEntry.Event, 1);
                 }
             }
 
@@ -122,18 +123,18 @@ namespace LogAnalyzer
                 return;
             }
 
-            foreach (var (logEntry, count) in errorLogs)
+            foreach (var (errorName, count) in errorDict)
             {
-                if (count > 0)
+                if (count > 2)
                 {
                     Alert alert = new Alert
                     {
                         Title = "ERROR REPETITION",
-                        AffectedUser = logEntry.User,
-                        Severity = oneEntry.Severity,
-                        Description = $"Error {logEntry.Event} has repeated {logEntry} times in the log",
-                        DateAndTime = logEntry.DateAndTime,
-                        Ip = logEntry.Ip
+                        AffectedUser = "NONE",
+                        Severity = "ERROR",
+                        Description = $"Error {errorName} has repeated {count} times in the log",
+                        DateAndTime = DateTime.MinValue,
+                        Ip = "NONE"
                     };
 
                     Alerts.Add(alert);
