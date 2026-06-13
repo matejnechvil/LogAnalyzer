@@ -262,7 +262,7 @@
             {
                 using (FolderBrowserDialog dialog = new FolderBrowserDialog())
                 {
-                    dialog.DescrIPtion = "Select Folder";
+                    dialog.Description = "Select Folder";
                     dialog.ShowNewFolderButton = true;
 
                     if (dialog.ShowDialog() == DialogResult.OK)
