@@ -1,12 +1,8 @@
-﻿using System.Reflection.Metadata.Ecma335;
-using System.Windows.Forms;
-using System.Xml.Serialization;
-using static System.ComponentModel.Design.ObjectSelectorEditor;
-
-namespace LogAnalyzer
+﻿namespace LogAnalyzer
 {
     internal class Program
     {
+        static LogAnalyzer logAnalyzer;
         static LogLoader logLoader = new LogLoader();
         [STAThread]
         static void Main(string[] args)
@@ -48,10 +44,11 @@ namespace LogAnalyzer
                         Choice3();
                         break;
                     case 4:
-                        Console.WriteLine("choice 4");
+                        Choice4();
                         break;
                     case 5:
                         PrintColored("Exiting...", ConsoleColor.Red);
+                        Thread.Sleep(1000);
                         running = false;
                         break;
                     default:
@@ -67,7 +64,7 @@ namespace LogAnalyzer
             PrintLogo("Loading file", ConsoleColor.Yellow);
             PrintColored((choice == 1 ? "Select log file path..." : "Select trusted IPs file path..."), ConsoleColor.DarkYellow);
 
-            string? path = GetPathDialog();
+            string? path = GetPathDialog("file");
             Console.Clear();
             PrintLogo("Loading file", ConsoleColor.Yellow);
 
@@ -88,7 +85,7 @@ namespace LogAnalyzer
                 }
                 else
                 {
-                    logLoader.LoadKnownIps(path);
+                    logLoader.LoadKnownIPs(path);
                 }
             }
             catch (Exception)
@@ -105,10 +102,10 @@ namespace LogAnalyzer
             Console.Clear();
             PrintLogo("Loading file", ConsoleColor.Yellow);
 
-            if (choice == 1 ? logLoader.Entries.Count > 0 : logLoader.KnownIps.Count > 0)
+            if (choice == 1 ? logLoader.Entries.Count > 0 : logLoader.KnownIPs.Count > 0)
             {
                 PrintColored("  ┌─ LOAD SUCCESSFUL ──────────────────────────┐", ConsoleColor.Green);
-                PrintColored($"  │  Lines loaded : {(choice == 1 ? logLoader.Entries.Count : logLoader.KnownIps.Count),-28}│", ConsoleColor.Green); PrintColored($"  │  File         : {Path.GetFileName(path),-28}│", ConsoleColor.Green);
+                PrintColored($"  │  Lines loaded : {(choice == 1 ? logLoader.Entries.Count : logLoader.KnownIPs.Count),-28}│", ConsoleColor.Green); PrintColored($"  │  File         : {Path.GetFileName(path),-28}│", ConsoleColor.Green);
                 PrintColored("  └─────────────────────────────────────────────┘", ConsoleColor.Green);
             }
             else
@@ -146,32 +143,134 @@ namespace LogAnalyzer
                 }
             }
 
-            LogAnalyzer logAnalyzer = new LogAnalyzer(logLoader.Entries, logLoader.KnownIps);
+            logAnalyzer = new LogAnalyzer(logLoader.Entries, logLoader.KnownIPs);
             logAnalyzer.Analyze();
-            foreach (Alert alert in logAnalyzer.Alerts)
+
+            Console.Clear();
+            PrintLogo("Analysis complete", ConsoleColor.Green);
+
+            PrintColored("  ┌─ ANALYSIS SUCCESSFUL ─────────────────────┐", ConsoleColor.Green);
+            PrintColored($"  │  Entries processed : {logLoader.Entries.Count,-22}│", ConsoleColor.Green);
+            PrintColored($"  │  Alerts generated  : {logAnalyzer.Alerts.Count,-22}│", ConsoleColor.Green);
+            PrintColored("  └────────────────────────────────────────────┘", ConsoleColor.Green);
+
+            Console.WriteLine();
+            PrintColored("  What do you want to display?", ConsoleColor.DarkGray);
+            Console.WriteLine("  1 - Statistics");
+            Console.WriteLine("  2 - All alerts");
+            Console.Write("  >> ");
+
+            string choice = Console.ReadLine();
+
+            Console.Clear();
+
+            if (choice == "1")
             {
-                Console.WriteLine(alert.Description);
+                Console.WriteLine(logAnalyzer.GetStatistics());
             }
-            Console.ReadLine();
-        }
-
-        static string GetPathDialog()
-        {
-            Application.EnableVisualStyles();
-            OpenFileDialog SelectFileDialog = new OpenFileDialog();
-            SelectFileDialog.Filter = "Log files (*.log)|*.log|Text files (*.txt)|*.txt|All files (*.*)|*.*";
-            SelectFileDialog.Title = "Select File";
-            string path;
-
-            if (SelectFileDialog.ShowDialog() == DialogResult.OK)
+            else if (choice == "2")
             {
-                path = SelectFileDialog.FileName;
-                return path;
+                foreach (var alert in logAnalyzer.Alerts)
+                {
+                    Console.WriteLine("==================================");
+                    Console.WriteLine($"Title: {alert.Title}");
+                    Console.WriteLine($"Severity: {alert.Severity}");
+                    Console.WriteLine($"Date: {alert.DateAndTime}");
+                    Console.WriteLine($"DescrIPtion: {alert.DescrIPtion}");
+                    Console.WriteLine($"Affected user: {alert.AffectedUser}");
+                    Console.WriteLine($"IP: {alert.IP}");
+                }
+
+                Console.WriteLine("==================================");
             }
             else
             {
-                return null;
+                Console.WriteLine("Invalid choice.");
             }
+
+            Console.WriteLine("\nPress Enter to continue...");
+            Console.ReadLine();
+        }
+        static void Choice4()
+        {
+            Console.Clear();
+            PrintLogo("Export", ConsoleColor.Yellow);
+
+            if (logAnalyzer == null || logAnalyzer.Alerts.Count == 0)
+            {
+                PrintColored("  [!] No alerts to export.\n", ConsoleColor.Red);
+                PrintColored("  Press Enter to continue...", ConsoleColor.DarkGray);
+                Console.Write("  >> ");
+                Console.ReadLine();
+                return;
+            }
+
+            string path = GetPathDialog("folder");
+
+            if (path == null)
+            {
+                PrintColored("  [✗] No export location selected.\n", ConsoleColor.Red);
+                PrintColored("  Press Enter to continue...", ConsoleColor.DarkGray);
+                Console.Write("  >> ");
+                Console.ReadLine();
+                return;
+            }
+
+            try
+            {
+                LogExporter exporter = new LogExporter();
+                exporter.ExportToTxt(
+                    logAnalyzer.Alerts,
+                    logAnalyzer.GetStatistics(),
+                    path
+                );
+
+                Console.Clear();
+                PrintLogo("Export", ConsoleColor.Green);
+
+                PrintColored("  ┌─ EXPORT SUCCESSFUL ───────────────────────┐", ConsoleColor.Green);
+                PrintColored($"  │  File saved to : {Path.GetFileName(path),-26}│", ConsoleColor.Green);
+                PrintColored("  └───────────────────────────────────────────┘", ConsoleColor.Green);
+            }
+            catch
+            {
+                PrintColored("  [✗] Export failed.", ConsoleColor.Red);
+            }
+
+            Console.WriteLine();
+            PrintColored("  Press Enter to continue...", ConsoleColor.DarkGray);
+            Console.Write("  >> ");
+            Console.ReadLine();
+        }
+
+        static string GetPathDialog(string mode)
+        {
+            Application.EnableVisualStyles();
+
+            if (mode.ToLower() == "file")
+            {
+                using (OpenFileDialog dialog = new OpenFileDialog())
+                {
+                    dialog.Filter = "Log files (*.log)|*.log|Text files (*.txt)|*.txt|All files (*.*)|*.*";
+                    dialog.Title = "Select File";
+
+                    if (dialog.ShowDialog() == DialogResult.OK)
+                        return dialog.FileName;
+                }
+            }
+            else if (mode.ToLower() == "folder")
+            {
+                using (FolderBrowserDialog dialog = new FolderBrowserDialog())
+                {
+                    dialog.DescrIPtion = "Select Folder";
+                    dialog.ShowNewFolderButton = true;
+
+                    if (dialog.ShowDialog() == DialogResult.OK)
+                        return dialog.SelectedPath;
+                }
+            }
+
+            return null;
         }
 
         static void PrintLogo(string status, ConsoleColor statusColor)

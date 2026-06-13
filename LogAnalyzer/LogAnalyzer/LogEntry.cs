@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace LogAnalyzer
+﻿namespace LogAnalyzer
 {
     internal class LogEntry
     {
@@ -13,8 +7,8 @@ namespace LogAnalyzer
         public required string Host { get; set; }
         public required string User { get; set; }
         public required string Event { get; set; }
-        public required string Ip { get; set; }
-        public required int port { get; set; }
+        public required string IP { get; set; }
+        public required int Port { get; set; }
         public required string Service { get; set; }
     }
 }

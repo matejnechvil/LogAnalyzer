@@ -11,8 +11,8 @@ namespace LogAnalyzer
         public required string Title { get; set; }
         public required string Severity { get; set; }
         public required DateTime DateAndTime { get; set; }
-        public required string Description { get; set; }
+        public required string DescrIPtion { get; set; }
         public required string AffectedUser { get; set; }
-        public required string Ip { get; set; }
+        public required string IP { get; set; }
     }
 }

@@ -1,22 +1,15 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics.Metrics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace LogAnalyzer
+﻿namespace LogAnalyzer
 {
     internal class LogLoader
     {
         public List<LogEntry> Entries { get; private set; }
-        public List<string> KnownIps{ get; private set; }
+        public List<string> KnownIPs{ get; private set; }
         public event Action<int> OnProgress;
 
         public LogLoader()
         {
             this.Entries = new List<LogEntry>();
-            this.KnownIps = new List<string>();
+            this.KnownIPs = new List<string>();
         }
 
         public void LoadEntries(string filePath)
@@ -28,12 +21,12 @@ namespace LogAnalyzer
             }
         }
 
-        public void LoadKnownIps(string filePath)
+        public void LoadKnownIPs(string filePath)
         {
-            KnownIps.Clear();
+            KnownIPs.Clear();
             foreach (var item in LoadFile(filePath))
             {
-                KnownIps.Add(item);
+                KnownIPs.Add(item);
             }
         }
 
@@ -65,14 +58,14 @@ namespace LogAnalyzer
             List<string> result = new List<string>();
 
             string[] parts = line.Split('|');
-            bool skipDate = true;
+            bool skIPDate = true;
 
             foreach (string part in parts)
             {
-                if (skipDate)
+                if (skIPDate)
                 {
                     result.Add(part);
-                    skipDate = false;
+                    skIPDate = false;
                     continue;
                 }
                 string[] subParts = part.Split(':');
@@ -93,7 +86,7 @@ namespace LogAnalyzer
                 Host = result[2].Trim(),
                 User = result[3].Trim(),
                 Event = result[4].Trim(),
-                Ip = result[5].Trim(),
+                IP = result[5].Trim(),
                 port = int.Parse(result[6]),
                 Service = result[7].Trim()
             };
