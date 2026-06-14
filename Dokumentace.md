@@ -2,38 +2,45 @@
 
 Autor: Matěj Nechvíl
 
+---
+
 ## 1. Zadání projektu
 
-Konzolová aplikace psaná v jazyce C# pro načítání a analýzu systémových logů. Program detekuje podezřelé aktivity (brute force útoky, neznámé IP adresy…). Výstupem programu je přehledný report z analyzovaných logů. Jsou použity vlastní testovací logy.
+Konzolová aplikace psaná v jazyce C# pro načítání a analýzu systémových logů. Program detekuje podezřelé aktivity v logu a generuje přehledný report. Jsou použity vlastní testovací logy.
+
+---
 
 ## 2. Funkce programu
 
-### 2.1 Práce se soubory
+### Práce se soubory
 
-- Načtení dat ze souboru ve vlastním textovém formátu (`.log` / `.txt`, pole oddělená znakem `|`)
-- Generace reportu a export do souboru (`.txt`)
+- Načtení logů ze souboru ve vlastním textovém formátu (`.log` / `.txt`, pole oddělená znakem `|`)
+- Načtení seznamu důvěryhodných IP adres ze souboru (`.txt`, jedna IP na řádek)
+- Export výsledků analýzy do souboru `report.txt`
 
-### 2.2 Detekce podezřelého chování
+### Detekce podezřelého chování
 
-- Brute force útok (stejná IP, X neúspěšných přihlášení za krátký časový úsek) — *plánováno, bude doplněno*
-- Zablokovaný účet
-- Detekce neznámé IP adresy (pomocí whitelistového souboru)
-- Opakované chyby stejného typu
-- Přihlášení v neobvyklou dobu (22:00 – 05:00)
+- **Brute force útok** – stejná IP provede více jak 5 neúspěšných přihlášení, přičemž mezi každými dvěma po sobě jdoucími pokusy uplyne méně než 20 sekund
+- **Zablokovaný účet** – výskyt události `ACCOUNT_LOCKED`
+- **Neznámá IP adresa** – IP adresa záznamu není v načteném seznamu důvěryhodných IP
+- **Opakující se chyba** – stejný typ chybové události se vyskytne více než 2× v celém logu
+- **Přihlášení v neobvyklou dobu** – přihlášení nebo neúspěšný pokus mezi 22:00 a 05:00
+
+---
 
 ## 3. Třídy
 
 | Třída | Atributy | Metody | Popis |
 |---|---|---|---|
-| `LogLoader` | `List<LogEntry> Entries`<br>`List<string> KnownIps`<br>`event Action<int> OnProgress` | `LoadEntries()`<br>`ParseEntry()`<br>`LoadKnownIps()` | Načte soubor s logy (`LoadEntries`) nebo soubor s důvěryhodnými IP adresami (`LoadKnownIps`); výsledky uloží do vlastností `Entries` / `KnownIps` |
-| `LogEntry` | `DateTime DateAndTime`<br>`string Severity`<br>`string Host`<br>`string User`<br>`string Event`<br>`string Ip`<br>`int Port`<br>`string Service` | — | Datová třída – jeden řádek záznamu |
-| `Alert` | `string Title`<br>`string Severity`<br>`string Description`<br>`string AffectedUser`<br>`string Ip`<br>`DateTime DateAndTime` | — | Datová třída – jedno upozornění |
-| `LogAnalyzer` | `List<LogEntry> Entries`<br>`List<string> KnownIps`<br>`List<Alert> Alerts` | `DetectBruteForce()`<br>`DetectLockedAccount()`<br>`DetectUnknownIPs()`<br>`DetectErrorRepetition()`<br>`DetectNightLogin()`<br>`CountAlertsByTitle()` (privátní)<br>`GetStatistics()` | Detekce hrozeb a výpočet statistik |
-| `LogExporter` | — | `ExportToTxt()` | Vytvoří soubor `report.txt` s přehledem statistik a všech alertů ve vybrané složce |
+| `LogLoader` | `List<LogEntry> Entries`<br>`List<string> KnownIPs`<br>`event Action<int> OnProgress` | `LoadEntries()`<br>`LoadKnownIPs()`<br>`LoadFile()` (privátní)<br>`ParseEntry()` (privátní) | Načte soubor s logy nebo soubor s důvěryhodnými IP adresami; výsledky uloží do vlastností `Entries` / `KnownIPs`. Při načítání vyvolává událost `OnProgress` s počtem zpracovaných řádků. |
+| `LogEntry` | `DateTime DateAndTime`<br>`string Severity`<br>`string Host`<br>`string User`<br>`string Event`<br>`string IP`<br>`int Port`<br>`string Service` | — | Datová třída reprezentující jeden řádek logu. |
+| `Alert` | `string Title`<br>`string Severity`<br>`string Description`<br>`string AffectedUser`<br>`string IP`<br>`DateTime DateAndTime` | — | Datová třída reprezentující jedno detekované upozornění. |
+| `LogAnalyzer` | `List<LogEntry> Entries` (privátní)<br>`List<string> KnownIPs` (privátní)<br>`List<Alert> Alerts`<br>`Dictionary<string,int> ErrorDict` (privátní)<br>`Dictionary<string,List<DateTime>> BruteForceDict` (privátní)<br>`Dictionary<string,string> bruteForceUsers` (privátní) | `Analyze()`<br>`DetectBruteForce()` (privátní)<br>`DetectLockedAccount()` (privátní)<br>`DetectUnknownIPs()` (privátní)<br>`DetectErrorRepetition()` (privátní)<br>`DetectNightLogin()` (privátní)<br>`CountAlertsByTitle()` (privátní)<br>`GetStatistics()` | Provede analýzu načtených záznamů a naplní seznam `Alerts`. Metoda `GetStatistics()` vrátí textový přehled počtů alertů dle kategorie. |
+| `LogExporter` | — | `ExportToTxt()` | Vytvoří soubor `report.txt` ve vybrané složce obsahující statistiky a seznam všech alertů. |
+
+---
 
 ## 4. Vazby mezi třídami
-
-Diagram znázorňuje závislosti a tok dat mezi třídami aplikace:
 
 ```
                     ┌─────────────┐
@@ -49,39 +56,52 @@ Diagram znázorňuje závislosti a tok dat mezi třídami aplikace:
     ┌─────────────┐ ┌─────────────┐ ┌─────────────┐
     │  LogEntry   │ │    Alert    │ │ report.txt  │
     └─────────────┘ └─────────────┘ └─────────────┘
-    (datová třída)   (datová třída)   (výstup)
+    (datová třída)   (datová třída)    (výstup)
 ```
-
-### Legenda vazeb
 
 | Vazba | Popis |
 |---|---|
-| `LogLoader → LogEntry` | LogLoader vytváří instance `LogEntry` při parsování každého řádku logu |
-| `LogLoader → LogAnalyzer` | LogLoader poskytuje `List<LogEntry>` a `List<string> KnownIps`, ze kterých Program vytvoří LogAnalyzer |
-| `LogAnalyzer → Alert` | LogAnalyzer vytváří instance `Alert` při detekci podezřelé aktivity |
-| `Program → LogAnalyzer` | Program vytvoří instanci LogAnalyzer s daty z LogLoaderu a zavolá `Analyze()` |
-| `Program → LogExporter` | Program vytvoří LogExporter a předá mu `Alerts` a statistiky z LogAnalyzeru pro export do `report.txt` |
-| `Program → vše` | Program řídí tok aplikace – volá metody všech tříd skrze menu |
+| `Program → LogLoader` | Program vytvoří instanci `LogLoader` a zavolá `LoadEntries()` / `LoadKnownIPs()` |
+| `LogLoader → LogEntry` | `LoadEntries()` vytváří instance `LogEntry` voláním `ParseEntry()` pro každý řádek |
+| `Program → LogAnalyzer` | Program vytvoří instanci `LogAnalyzer` s daty z `LogLoader` a zavolá `Analyze()` |
+| `LogAnalyzer → Alert` | Detekční metody vytvářejí instance `Alert` a přidávají je do `Alerts` |
+| `Program → LogExporter` | Program vytvoří `LogExporter` a předá mu `Alerts` a výstup `GetStatistics()` pro export |
 
-## 5. Ovládání
+---
 
-Veškeré ovládání probíhá skrze konzoli výběrem číselné volby (1 – 5) a klávesou Enter pro potvrzení. Pro výběr souboru s logy, souboru s důvěryhodnými IP adresami a cílové složky pro export se otevře systémové okno (`OpenFileDialog` / `FolderBrowserDialog`).
+## 5. Popis práce se soubory
 
-## 6. Formát testovacích logů
+### Vstup – logy
 
-Testovací logy jsou ve vlastním formátu, kde jsou pole oddělena znakem `|`:
+Soubor je načten řádek po řádku pomocí `StreamReader`. Každý řádek je zpracován metodou `ParseEntry()`, která ho rozdělí podle oddělovače `|`. První pole (datum a čas) je převzato celé, ostatní pole jsou ve formátu `klíč:hodnota` – parser vezme vždy část za první dvojtečkou.
 
+Formát řádku:
 ```
-2024-03-01 07:12:34 | INFO | host:PC-NOVAK | user:admin | EVENT:LOGIN_SUCCESS | IP:192.168.1.1 | port:49721 | service:winlogon
+2025-05-12 08:30:49 | WARNING | host:PC-NOVAK | user:admin | EVENT:LOGIN_FAIL | IP:185.220.101.45 | port:4139 | service:sshd
 ```
 
-Pole záznamu:
+Pořadí polí: datum a čas, závažnost, hostname, uživatel, událost, IP adresa, port, služba.
 
-1. datum a čas
-2. závažnost (`INFO` / `WARNING` / `ERROR`)
-3. hostname
-4. uživatel
-5. typ události (`LOGIN_SUCCESS`, `LOGIN_FAIL`, `ACCOUNT_LOCKED`...)
-6. IP adresa
-7. port
-8. služba (`winlogon`, `sshd`, `ntfs`, `security`)
+### Vstup – důvěryhodné IP adresy
+
+Soubor obsahuje jednu IP adresu na každém řádku. Načítá se metodou `LoadKnownIPs()` do `List<string> KnownIPs`.
+
+### Výstup – report.txt
+
+Soubor je vytvořen pomocí `StreamWriter` do složky zvolené uživatelem. Obsahuje sekci statistik a sekci s výpisem všech alertů.
+
+---
+
+## 6. Ovládání
+
+Aplikace běží v konzoli a ovládá se výběrem číselné volby (1–5) a klávesou Enter. Pro výběr souboru nebo cílové složky se otevře systémové dialogové okno (`OpenFileDialog` / `FolderBrowserDialog`).
+
+| Volba | Akce |
+|---|---|
+| 1 | Načíst soubor s logy |
+| 2 | Načíst soubor s důvěryhodnými IP adresami |
+| 3 | Spustit analýzu a zobrazit výsledky |
+| 4 | Exportovat výsledky do `report.txt` |
+| 5 | Ukončit program |
+
+Po analýze (volba 3) lze zobrazit buď souhrnné statistiky, nebo kompletní seznam alertů.

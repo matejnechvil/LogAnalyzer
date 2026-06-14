@@ -87,7 +87,7 @@
                 User = result[3].Trim(),
                 Event = result[4].Trim(),
                 IP = result[5].Trim(),
-                port = int.Parse(result[6]),
+                Port = int.Parse(result[6]),
                 Service = result[7].Trim()
             };
             return entry;

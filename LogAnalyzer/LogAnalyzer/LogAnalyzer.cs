@@ -1,10 +1,16 @@
-﻿namespace LogAnalyzer
+﻿using Microsoft.VisualBasic;
+
+namespace LogAnalyzer
 {
     internal class LogAnalyzer
     {
         private List<LogEntry> Entries;
         private List<string> KnownIPs;
-        Dictionary<string, int> errorDict = new Dictionary<string, int>();
+        Dictionary<string, int> ErrorDict = new Dictionary<string, int>();
+        Dictionary<string, List<DateTime>> BruteForceDict = new Dictionary<string, List<DateTime>>();
+        Dictionary<string, string> bruteForceUsers = new Dictionary<string, string>();
+
+
 
         public List<Alert> Alerts { get; set; }
 
@@ -23,6 +29,7 @@
                 DetectNightLogin(Entries[i]);
                 DetectUnknownIPs(Entries[i]);
                 DetectErrorRepetition(Entries[i], i);
+                DetectBruteForce(Entries[i], i);
             }
             GetStatistics();
         }
@@ -102,13 +109,13 @@
         {
             if (oneEntry.Severity == "ERROR")
             {
-                if (errorDict.ContainsKey(oneEntry.Event))
+                if (ErrorDict.ContainsKey(oneEntry.Event))
                 {
-                    errorDict[oneEntry.Event]++;
+                    ErrorDict[oneEntry.Event]++;
                 }
                 else
                 {
-                    errorDict.Add(oneEntry.Event, 1);
+                    ErrorDict.Add(oneEntry.Event, 1);
                 }
             }
 
@@ -117,7 +124,7 @@
                 return;
             }
 
-            foreach (var (errorName, count) in errorDict)
+            foreach (var (errorName, count) in ErrorDict)
             {
                 if (count > 2)
                 {
@@ -132,6 +139,59 @@
                     };
 
                     Alerts.Add(alert);
+                }
+            }
+        }
+        private void DetectBruteForce(LogEntry oneEntry, int iteration)
+        {
+            int timespan = 20;
+            int loginCount = 5;
+
+            if (oneEntry.Event == "LOGIN_FAIL")
+            {
+                if (!BruteForceDict.ContainsKey(oneEntry.IP)) {
+                    BruteForceDict[oneEntry.IP] = new List<DateTime>();
+                }
+                BruteForceDict[oneEntry.IP].Add(oneEntry.DateAndTime);
+                bruteForceUsers[oneEntry.IP] = oneEntry.User;
+            }
+
+            if (iteration != Entries.Count - 1)
+            {
+                return;
+            }
+
+            foreach (var item in BruteForceDict)
+            {
+                if (item.Value.Count > loginCount)
+                {
+                    bool bruteForce = true;
+                    for (int i = 0; i < item.Value.Count - 1; i++)
+                    {
+                        TimeSpan secondsBetweenLogins = item.Value[i+1] - item.Value[i];
+                        int seconds = (int)secondsBetweenLogins.TotalSeconds;
+
+                        if (seconds > timespan )
+                        {
+                            bruteForce = false;
+                        }
+                    }
+
+                    if (bruteForce)
+                    {
+
+                        Alert alert = new Alert
+                        {
+                            Title = "BRUTE FORCE ATTACK",
+                            AffectedUser = bruteForceUsers[item.Key],
+                            Severity = "ERROR",
+                            DescrIPtion = $"BruteForce attack was detected on ip {oneEntry.IP} user/s {bruteForceUsers[item.Key]}... Login attemps: {item.Value.Count}",
+                            DateAndTime = item.Value[item.Value.Count - 1],
+                            IP = item.Key
+                        };
+
+                        Alerts.Add(alert);
+                    }
                 }
             }
         }
@@ -156,6 +216,7 @@
  Total entries: {Entries.Count};
  Total alerts: {Alerts.Count};
  - - - - - - - - - - - -
+ Brute force detections: {CountAlertsByTitle("BRUTE FORCE ATTACK")}
  Accounts Locked: {CountAlertsByTitle("ACCOUNT LOCKED")};
  Unrecognized IPs: {CountAlertsByTitle("UNKNOWN IP ADRESS")};
  Night logins: {CountAlertsByTitle("NIGHT LOGIN")};
